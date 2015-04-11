@@ -1,0 +1,24 @@
+imageFileList = { 'p1010847.jpg', 'p1010846.jpg','p1010845.jpg','p1010844.jpg','p1010843.jpg'};
+imageBaseDir = 'images';
+dataBaseDir = 'data';
+params.maxImageSize = 1000;
+params.gridSpacing = 8;
+params.patchSize = 16;
+params.dictionarySize = 200;
+params.numTextonImages = 50;
+params.pyramidLevels = 3;
+params.maxImageSize = 1000;
+params.gridSpacing = 8;
+params.patchSize = 16;
+params.dictionarySize = 200;
+params.numTextonImages = 50;
+params.pyramidLevels = 3;
+canSkip = 1;
+pfig = figure();
+GenerateSiftDescriptors( imageFileList, imageBaseDir, dataBaseDir, params, canSkip, pfig );
+featureSuffix = '_sift.mat';
+CalculateDictionary( imageFileList, imageBaseDir, dataBaseDir, featureSuffix, params, canSkip, pfig );
+
+%H_all = BuildHistograms( imageFileList,imageBaseDir, dataBaseDir, featureSuffix, params, canSkip, pfig );
+%textonSuffix = sprintf('_texton_ind_%d.mat',params.dictionarySize);
+%pyramid_all = CompilePyramid( imageFileList, dataBaseDir, textonSuffix, params, canSkip, pfig );
