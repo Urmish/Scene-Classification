@@ -1,47 +1,77 @@
-imageFileList = { 'p1010847.jpg', 'p1010846.jpg','p1010845.jpg','p1010844.jpg','p1010843.jpg'};
-imageBaseDir = 'images';
+warning('off', 'MATLAB:hg:EraseModeIgnored')
 dataBaseDir = 'data';
 
+rng(0);  % Seed RNG so that randomization is deterministic
+
 %% Get all filenames from imageBaseDir
-imageBaseDir = '../scene_categories_together';
-structList = dir(imageBaseDir);
+
+%rdir http://www.mathworks.com/matlabcentral/fileexchange/19550-recursive-directory-listing
+imageBaseDir = '../scene_categories';
+structList = rdir('../scene_categories/*/*.jpg');
 imageFileList = {structList.name};  % Get filenames from struct
-imageFileList = imageFileList(3:end);  % Remove . and ..
+numExamples = length(imageFileList);
+
+%% Subsample from image filenames to test whether code functions
+
+if (exist('doSubsample', 'var') && doSubsample)
+    % Shuffle image filenames
+    imageFileList = imageFileList(randperm(numExamples));
+
+    % Retain a subset
+    subsample_size = 1000;  % number of filenames to retain
+    imageFileList = imageFileList(1:subsample_size);
+end
+
 
 %% Get labels of every image filename
 
+% Get subdirectory of each image filename
+subdirs = cellfun(@fileparts, imageFileList, 'UniformOutput', 0);
+
+% Subdirectories are string labels for each class
+unique_subdirs = unique(subdirs);
+
 numExamples = length(imageFileList);
-valid_prefixes = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ...
-    '10', '11', '12', '13', '14'};
 
 labels = [];
 for i = 1 : numExamples
-    filename = imageFileList{i};
-    underscoreLocations = strfind(filename, '_');
-    label = str2num(filename(1 : underscoreLocations(1) - 1));
+    subdir = subdirs{i};
+    label = find(ismember(unique_subdirs, subdir));
     
     labels(i) = label;
 end
 
+%% Print histogram of label distribution
+
+labelSet = unique(labels);
+counts = hist(labels, labelSet);
+fprintf('Distribution of labels in entire dataset of %i instances:\n', numExamples);
+fprintf('Labels: %s\n', sprintf('%4i ', labelSet));
+fprintf('Counts: %s\n', sprintf('%4i ', counts));
 
 %% Split data into train and test sets
 
-numTrainPerClass = 3;  % Number of training examples per class;
+numTrainPerClass = 10;  % Number of training examples per class;
 fTrain = {};  % Filenames of training instances
 fTest = {};  % Filenames of test instances
 yTrain = [];  % Labels of training instances
 yTest = [];  % Labels of test instances
 
 labeledInstances = [imageFileList' num2cell(labels)'];
-for i = 0 : 14
+for i = unique(labels)
     
     % Get indices of a random sample of labeled instances that match this label
     indAll = find(cell2mat(labeledInstances(:, 2)) == i);
     
     % Split indices into training and test
     indAll = indAll(randperm(numel(indAll)));  % shuffle indices
-    indTrain = indAll(1 : numTrainPerClass);
-    indTest = indAll(numTrainPerClass + 1: end);
+    if (numel(indAll) >= numTrainPerClass)
+        indTrain = indAll(1 : numTrainPerClass);
+        indTest = indAll(numTrainPerClass + 1: end);
+    else
+        indTrain = indAll;
+        indTest = [];
+    end
     
     %labeledInstancesTrain = labeledInstances(indTrain, 2);
     %labeledInstancesTest = labeledInstances(indTest, :);
@@ -105,7 +135,7 @@ xTest = CompilePyramid( fTest, dataBaseDir, textonSuffix, params, canSkip, pfig 
 %% Train SVM
 
 yTrain = double(yTrain);  % liblinear requires labels to be double
-xTrain = pyramid_all;  % x is examples, y is labels
+xTrain = xTrain;  % x is examples, y is labels
 numFeatures = size(xTrain, 1);
 model = train(yTrain, sparse(xTrain));  % liblinear requires xTrain to be sparse
 
@@ -114,3 +144,4 @@ model = train(yTrain, sparse(xTrain));  % liblinear requires xTrain to be sparse
 
 % Labels are required to compute accuracy. Just a convenient feature.
 [predicted_label, accuracy, ~] = predict(yTest, sparse(xTest), model);
+disp(accuracy);
