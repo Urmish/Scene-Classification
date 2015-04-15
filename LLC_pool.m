@@ -1,4 +1,4 @@
-function [beta] = LLC_pool(features, dictionary, pyramidLevels, neighbors)
+function [hist] = LLC_pool(features, dictionary, pyramidLevels, neighbors)
 %LLC_POOL Summary of this function goes here
 %   Detailed explanation goes here
 if ~exist('neighbors', 'var') || isempty(neighbors),
@@ -9,20 +9,19 @@ pyramid = (2.^(0:(pyramidLevels-1)));
 sub_Regions = pyramid.^2;
 total_Regions = sum(sub_Regions);
 d_size = size(dictionary, 1);%Dictionary is in transposed condition, see LLC_coding_appr call, B' is passed
-
+hist = zeros(d_size*total_Regions,1);
 
 img_width = features.wid;
 img_height = features.hgt;
 
 % llc coding
 llc_codes = LLC_Coding_2(dictionary, features, neighbors,1);
-llc_codes = llc_codes';
+
 
 %Setting up pyramid structure
 
-beta = zeros(d_size, total_Regions);
-loopCount = 0;
 
+start = 1;
 for current_Level = 1:pyramidLevels
     
     scaled_width = img_width / pyramid(current_Level);
@@ -34,7 +33,6 @@ for current_Level = 1:pyramidLevels
     y_subRegion = ceil(features.y / scaled_height);
     index_Region = (y_subRegion - 1)*pyramid(current_Level) + x_subRegion;
     for current_Region = 1:t_subRegions
-        loopCount = loopCount + 1;
         %For each bin, find out which features lie in it, so that they
         %could be maxed!!
         %NOTE: SPM used sum pooling instead of max
@@ -42,16 +40,10 @@ for current_Level = 1:pyramidLevels
         if isempty(target_indexes),
             continue;
         end      
-        beta(:, loopCount) = max(llc_codes(:, target_indexes), [], 2);
+        hist(start+(current_Region-1)*d_size:start+current_Region*d_size-1,1) = max(llc_codes(:, target_indexes), [], 2);
     end
-    
+    start = start + d_size*t_subRegions;
 end
 
-if loopCount ~= total_Regions,
-    error('Index number error!');
+hist = hist./sqrt(sum(hist.^2));
 end
-
-beta = beta(:);
-beta = beta./sqrt(sum(beta.^2));
-end
-

@@ -62,6 +62,6 @@ else
         c_hat(i,n_temp) = w';
     end
 end
-
+c_hat = c_hat';
 end
 
