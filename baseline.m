@@ -18,7 +18,7 @@ if (exist('doSubsample', 'var') && doSubsample)
     imageFileList = imageFileList(randperm(numExamples));
 
     % Retain a subset
-    subsample_size = 1000;  % number of filenames to retain
+    subsample_size = 100;  % number of filenames to retain
     imageFileList = imageFileList(1:subsample_size);
 end
 
@@ -134,14 +134,23 @@ xTest = CompilePyramid( fTest, dataBaseDir, textonSuffix, params, canSkip, pfig 
 
 %% Train SVM
 
+% Compute kernel matrix so that we can train a kernel SVM
+% From the libSVM README:
+% To use precomputed kernel, you must include sample serial number as
+% the first column of the training and testing data
+kernelMatrixTrain = hist_isect(xTrain, xTrain);
+kernelMatrixTrain = [[1:size(kernelMatrixTrain, 1)]' kernelMatrixTrain];
+
 yTrain = double(yTrain);  % liblinear requires labels to be double
-xTrain = xTrain;  % x is examples, y is labels
-numFeatures = size(xTrain, 1);
-model = train(yTrain, sparse(xTrain));  % liblinear requires xTrain to be sparse
+model = svmtrain(yTrain, kernelMatrixTrain);
 
 
 %% Predict labels for test images
 
+kernelMatrixTest = hist_isect(xTest, xTrain);
+kernelMatrixTest = [[1:size(kernelMatrixTest, 1)]' kernelMatrixTest];
+
 % Labels are required to compute accuracy. Just a convenient feature.
-[predicted_label, accuracy, ~] = predict(yTest, sparse(xTest), model);
+svmpredict(yTest, kernelMatrixTest, model);
+%[predicted_label, accuracy, ~] = predict(yTest, sparse(xTest), model);
 disp(accuracy);
