@@ -41,17 +41,9 @@ for i = 1 : numExamples
     labels(i) = label;
 end
 
-%% Print histogram of label distribution
-
-labelSet = unique(labels);
-counts = hist(labels, labelSet);
-fprintf('Distribution of labels in entire dataset of %i instances:\n', numExamples);
-fprintf('Labels: %s\n', sprintf('%4i ', labelSet));
-fprintf('Counts: %s\n', sprintf('%4i ', counts));
-
 %% Split data into train and test sets
 
-numTrainPerClass = 10;  % Number of training examples per class;
+numTrainPerClass = 100;  % Number of training examples per class;
 fTrain = {};  % Filenames of training instances
 fTest = {};  % Filenames of test instances
 yTrain = [];  % Labels of training instances
@@ -82,6 +74,17 @@ for i = unique(labels)
     yTest = [yTest; cell2mat(labeledInstances(indTest, 2))];
     
 end
+
+
+%% Print histogram of label distribution
+
+fprintf('Distribution of labels in entire dataset of %i instances:\n', numExamples);
+PrintLabelDistribution(labels);
+fprintf('Distribution of labels in training set of %i instances:\n', length(yTrain));
+PrintLabelDistribution(yTrain);
+fprintf('Distribution of labels in test set of %i instances:\n', length(yTest));
+PrintLabelDistribution(yTest);
+
 
 %% Define parameters of feature extraction
 
@@ -121,15 +124,15 @@ GenerateSiftDescriptors( imageFileList, imageBaseDir, dataBaseDir, params, canSk
 
 % Calculate dictionary only from training images. IMPORTANT!!
 imageFileList = fTrain;
-CalculateDictionary( imageFileList, imageBaseDir, dataBaseDir, featureSuffix, params, canSkip, pfig );
+CalculateDictionary( imageFileList, imageBaseDir, dataBaseDir, featureSuffix, params, 0, pfig );
 
 % Build histograms from both training and test images
 imageFileList = [fTrain fTest];
-H_all = BuildHistograms( imageFileList,imageBaseDir, dataBaseDir, featureSuffix, params, canSkip, pfig );
+H_all = BuildHistograms( imageFileList,imageBaseDir, dataBaseDir, featureSuffix, params, 0, pfig );
 
 % Calculate feature vectors for training and test images separately
-xTrain = CompilePyramid( fTrain, dataBaseDir, textonSuffix, params, canSkip, pfig );
-xTest = CompilePyramid( fTest, dataBaseDir, textonSuffix, params, canSkip, pfig );
+xTrain = CompilePyramid( fTrain, dataBaseDir, textonSuffix, params, 0, pfig );
+xTest = CompilePyramid( fTest, dataBaseDir, textonSuffix, params, 0, pfig );
 
 
 %% Train SVM
@@ -142,7 +145,7 @@ kernelMatrixTrain = hist_isect(xTrain, xTrain);
 kernelMatrixTrain = [[1:size(kernelMatrixTrain, 1)]' kernelMatrixTrain];
 
 yTrain = double(yTrain);  % liblinear requires labels to be double
-model = svmtrain(yTrain, kernelMatrixTrain);
+svmModel = svmtrain(yTrain, kernelMatrixTrain);
 
 
 %% Predict labels for test images
@@ -150,7 +153,12 @@ model = svmtrain(yTrain, kernelMatrixTrain);
 kernelMatrixTest = hist_isect(xTest, xTrain);
 kernelMatrixTest = [[1:size(kernelMatrixTest, 1)]' kernelMatrixTest];
 
-% Labels are required to compute accuracy. Just a convenient feature.
-svmpredict(yTest, kernelMatrixTest, model);
+% Labels are required to compute accuracy. Just a convenient featuretrain .
+[predicted_label, accuracy, ~] = svmpredict(yTest, kernelMatrixTest, svmModel);
 %[predicted_label, accuracy, ~] = predict(yTest, sparse(xTest), model);
-disp(accuracy);
+
+
+%% Train and predict with linear SVM
+fprintf('Train and predict with linear SVM');
+linearModel = train(yTrain, sparse(xTrain));
+predictions = predict(yTest, sparse(xTest), linearModel);
