@@ -14,14 +14,19 @@ if ~exist('regularization', 'var') || isempty(regularization),
 end
 
 % Calculate the distance matrix
+% Using the method used in sp_dist2 to do so.
 n2 = (ones(d_size, 1) * sum((f.^2)', 1))' + ones(f_size, 1) * sum((d.^2)',1) - 2.*(f*(d'));
+%n2 has the distance of each point in one matrix with that in another
+%matrix
 
-% Calculate the nearest neighbors
+% Calculation of nearest neighbors is just a sorting algorithm now
 nn_index = zeros(f_size, neighbors);
 for i = 1:f_size,
 	dist = n2(i,:);
-	[~, idx] = sort(dist, 'ascend'); 
-	nn_index(i, :) = idx(1:neighbors);
+    %Each row represents the distance of i with every other point in the
+    %second matrix, we need to pick the best n among them.
+	[~, temp_index] = sort(dist, 'ascend'); 
+	nn_index(i, :) = temp_index(1:neighbors);
 end
 
 c_hat = zeros(f_size, d_size); %Initialize c_hat variable
@@ -30,6 +35,7 @@ c_hat = zeros(f_size, d_size); %Initialize c_hat variable
 % c_hat = zeros(f_size, neigbors, neigbors);
 if (~regularization)
     for i=1:f_size
+          %Taken from demo.m as provided with the assignment
 %         B = randn( neighbors, size(dictionary,2));
 %         % create truth code
 %         c = randn(neighbors, 1);
@@ -46,7 +52,10 @@ if (~regularization)
         c_hat(i,n_temp) = w';
     end
 else
-    %Used only for comparison purpose. For results, if condition code used
+    %Used only for experimental purposes. This part of the code is only
+    %used to evaluate our implementation performance with their
+    %implementation performance. The intention is to understand the effect
+    %of beta on the final output.
     t = ones(neighbors,1);
     t = diag(t);
     if ~exist('beta', 'var') || isempty(beta),
@@ -62,6 +71,5 @@ else
         c_hat(i,n_temp) = w';
     end
 end
-
+c_hat = c_hat';
 end
-
