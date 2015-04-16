@@ -43,37 +43,8 @@ end
 
 %% Split data into train and test sets
 
-numTrainPerClass = 100;  % Number of training examples per class;
-fTrain = {};  % Filenames of training instances
-fTest = {};  % Filenames of test instances
-yTrain = [];  % Labels of training instances
-yTest = [];  % Labels of test instances
-
-labeledInstances = [imageFileList' num2cell(labels)'];
-for i = unique(labels)
-    
-    % Get indices of a random sample of labeled instances that match this label
-    indAll = find(cell2mat(labeledInstances(:, 2)) == i);
-    
-    % Split indices into training and test
-    indAll = indAll(randperm(numel(indAll)));  % shuffle indices
-    if (numel(indAll) >= numTrainPerClass)
-        indTrain = indAll(1 : numTrainPerClass);
-        indTest = indAll(numTrainPerClass + 1: end);
-    else
-        indTrain = indAll;
-        indTest = [];
-    end
-    
-    %labeledInstancesTrain = labeledInstances(indTrain, 2);
-    %labeledInstancesTest = labeledInstances(indTest, :);
-    
-    fTrain = [fTrain labeledInstances(indTrain, 1)'];
-    fTest = [fTest labeledInstances(indTest, 1)'];
-    yTrain = [yTrain; cell2mat(labeledInstances(indTrain, 2))];
-    yTest = [yTest; cell2mat(labeledInstances(indTest, 2))];
-    
-end
+numTrainPerClass = 10;  % Number of training examples per class;
+[fTrain, fTest, yTrain, yTest] = TrainTestSplit( imageFileList, labels, numTrainPerClass )
 
 
 %% Print histogram of label distribution
