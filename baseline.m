@@ -43,8 +43,8 @@ end
 
 %% Split data into train and test sets
 
-numTrainPerClass = 10;  % Number of training examples per class;
-[fTrain, fTest, yTrain, yTest] = TrainTestSplit( imageFileList, labels, numTrainPerClass )
+numTrainPerClass = 100;  % Number of training examples per class;
+[fTrain, fTest, yTrain, yTest] = TrainTestSplit( imageFileList, labels, numTrainPerClass );
 
 
 %% Print histogram of label distribution
@@ -95,15 +95,15 @@ GenerateSiftDescriptors( imageFileList, imageBaseDir, dataBaseDir, params, canSk
 
 % Calculate dictionary only from training images. IMPORTANT!!
 imageFileList = fTrain;
-CalculateDictionary( imageFileList, imageBaseDir, dataBaseDir, featureSuffix, params, 0, pfig );
+CalculateDictionary( imageFileList, imageBaseDir, dataBaseDir, featureSuffix, params, canSkip, pfig );
 
 % Build histograms from both training and test images
 imageFileList = [fTrain fTest];
-H_all = BuildHistograms( imageFileList,imageBaseDir, dataBaseDir, featureSuffix, params, 0, pfig );
+H_all = BuildHistograms( imageFileList,imageBaseDir, dataBaseDir, featureSuffix, params, canSkip, pfig );
 
 % Calculate feature vectors for training and test images separately
-xTrain = CompilePyramid( fTrain, dataBaseDir, textonSuffix, params, 0, pfig );
-xTest = CompilePyramid( fTest, dataBaseDir, textonSuffix, params, 0, pfig );
+xTrain = CompilePyramid( fTrain, dataBaseDir, textonSuffix, params, canSkip, pfig );
+xTest = CompilePyramid( fTest, dataBaseDir, textonSuffix, params, canSkip, pfig );
 
 
 %% Train SVM
@@ -116,7 +116,7 @@ kernelMatrixTrain = hist_isect(xTrain, xTrain);
 kernelMatrixTrain = [[1:size(kernelMatrixTrain, 1)]' kernelMatrixTrain];
 
 yTrain = double(yTrain);  % liblinear requires labels to be double
-svmModel = svmtrain(yTrain, kernelMatrixTrain);
+svmModel = svmtrain(yTrain, kernelMatrixTrain, '-t 4');
 
 
 %% Predict labels for test images
@@ -125,11 +125,14 @@ kernelMatrixTest = hist_isect(xTest, xTrain);
 kernelMatrixTest = [[1:size(kernelMatrixTest, 1)]' kernelMatrixTest];
 
 % Labels are required to compute accuracy. Just a convenient featuretrain .
-[predicted_label, accuracy, ~] = svmpredict(yTest, kernelMatrixTest, svmModel);
-%[predicted_label, accuracy, ~] = predict(yTest, sparse(xTest), model);
+[predTest, accuracy, ~] = svmpredict(yTest, kernelMatrixTest, svmModel);
 
+meanAccuracyTest = ComputeMeanAccuracy(yTest, predTest);
 
 %% Train and predict with linear SVM
 fprintf('Train and predict with linear SVM');
 linearModel = train(yTrain, sparse(xTrain));
 predictions = predict(yTest, sparse(xTest), linearModel);
+
+fprintf('Mean accuracy for spatial pyramid + kernel SVM = %.1f%%\n', 100 * meanAccuracyTest);
+fprintf('Mean accuracy for spatial pyramid + linear SVM = %.1f%%\n', 100 * ComputeMeanAccuracy(yTest, predictions));
