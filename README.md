@@ -7,3 +7,6 @@ To run baseline
 <b></b>
 
     >> close all;clear all;baseline;
+
+
+See wiki for further instructions on how to run the program and results.
